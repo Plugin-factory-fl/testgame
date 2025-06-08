@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grassy Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2d5016, #4a7c27);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #333;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(45deg, #4CAF50, #66BB6A);
+            touch-action: none;
+        }
+
+        .game-info {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+
+        .controls-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .dpad {
+            position: absolute;
+            bottom: 32px;
+            left: 32px;
+            width: 192px;
+            height: 192px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 4px;
+            pointer-events: auto;
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.075s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .dpad-btn:active {
+            background: rgba(200, 200, 200, 0.9);
+            transform: scale(0.95);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-center { 
+            grid-column: 2; 
+            grid-row: 2; 
+            background: rgba(100, 100, 100, 0.3);
+            pointer-events: none;
+        }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+
+        .action-btn {
+            position: absolute;
+            bottom: 32px;
+            right: 32px;
+            width: 192px;
+            height: 192px;
+            background: linear-gradient(145deg, #ff6b6b, #ff5252);
+            border: none;
+            border-radius: 50%;
+            font-size: 60px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.075s ease;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 16px rgba(255, 107, 107, 0.5);
+        }
+
+        /* Landscape orientation optimizations */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .dpad {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            .action-btn {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                right: 20px;
+                font-size: 50px;
+            }
+
+            .game-info {
+                font-size: 16px;
+                top: 10px;
+                left: 10px;
+            }
+        }
+
+        /* Portrait orientation optimizations */
+        @media (orientation: portrait) {
+            .dpad {
+                width: 180px;
+                height: 180px;
+                bottom: 40px;
+                left: 20px;
+            }
+            
+            .action-btn {
+                width: 180px;
+                height: 180px;
+                bottom: 40px;
+                right: 20px;
+                font-size: 55px;
+            }
+        }
+
+        /* Small screens */
+        @media (max-width: 480px) {
+            .dpad {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                left: 16px;
+            }
+            
+            .action-btn {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                right: 16px;
+                font-size: 50px;
+            }
+
+            .game-info {
+                font-size: 14px;
+                top: 8px;
+                left: 8px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 360px) {
+            .dpad {
+                width: 140px;
+                height: 140px;
+                bottom: 16px;
+                left: 12px;
+            }
+            
+            .action-btn {
+                width: 140px;
+                height: 140px;
+                bottom: 16px;
+                right: 12px;
+                font-size: 45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="game-info">
+            <div>Grassy Adventure</div>
+            <div style="font-size: 14px; margin-top: 4px;">Use D-pad to move around!</div>
+        </div>
+
+        <div class="controls-container">
+            <div class="dpad">
+                <div></div>
+                <button class="dpad-btn dpad-up" data-direction="up">▲</button>
+                <div></div>
+                <button class="dpad-btn dpad-left" data-direction="left">◀</button>
+                <div class="dpad-btn dpad-center"></div>
+                <button class="dpad-btn dpad-right" data-direction="right">▶</button>
+                <div></div>
+                <button class="dpad-btn dpad-down" data-direction="down">▼</button>
+                <div></div>
+            </div>
+
+            <button class="action-btn">A</button>
+        </div>
+    </div>
+
+    <script>
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.setupCanvas();
+                
+                this.player = {
+                    x: 400,
+                    y: 300,
+                    width: 120,
+                    height: 140,
+                    speed: 4,
+                    color: '#8B4513',
+                    facing: 'down',
+                    isMoving: false,
+                    animationFrame: 0,
+                    animationSpeed: 0.2,
+                    isJumping: false,
+                    jumpHeight: 0,
+                    jumpSpeed: 0,
+                    originalWidth: 120,
+                    originalHeight: 140
+                };
+
+                this.keys = {
+                    up: false,
+                    down: false,
+                    left: false,
+                    right: false
+                };
+
+                this.grassPattern = this.createGrassPattern();
+                this.setupControls();
+                this.gameLoop();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvasWidth = rect.width;
+                this.canvasHeight = rect.height;
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                this.canvas.style.width = rect.width + 'px';
+                this.canvas.style.height = rect.height + 'px';
+            }
+
+            createGrassPattern() {
+                const patternCanvas = document.createElement('canvas');
+                patternCanvas.width = 100;
+                patternCanvas.height = 100;
+                const patternCtx = patternCanvas.getContext('2d');
+                
+                // Base grass color
+                patternCtx.fillStyle = '#4CAF50';
+                patternCtx.fillRect(0, 0, 100, 100);
+                
+                // Add grass texture
+                for (let i = 0; i < 200; i++) {
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    const length = Math.random() * 8 + 4;
+                    
+                    patternCtx.strokeStyle = `hsl(${120 + Math.random() * 40}, 60%, ${35 + Math.random() * 20}%)`;
+                    patternCtx.lineWidth = 1;
+                    patternCtx.beginPath();
+                    patternCtx.moveTo(x, y);
+                    patternCtx.lineTo(x + Math.random() * 4 - 2, y - length);
+                    patternCtx.stroke();
+                }
+                
+                return this.ctx.createPattern(patternCanvas, 'repeat');
+            }
+
+            setupControls() {
+                // D-pad controls
+                const dpadButtons = document.querySelectorAll('.dpad-btn[data-direction]');
+                dpadButtons.forEach(button => {
+                    const direction = button.dataset.direction;
+                    
+                    button.addEventListener('mousedown', () => this.keys[direction] = true);
+                    button.addEventListener('mouseup', () => this.keys[direction] = false);
+                    button.addEventListener('mouseleave', () => this.keys[direction] = false);
+                    
+                    button.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.keys[direction] = true;
+                    });
+                    button.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        this.keys[direction] = false;
+                    });
+                });
+
+                // Action button
+                const actionBtn = document.querySelector('.action-btn');
+                actionBtn.addEventListener('click', () => this.performAction());
+                actionBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.performAction();
+                });
+
+                // Keyboard controls for desktop
+                document.addEventListener('keydown', (e) => {
+                    switch(e.code) {
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            this.keys.up = true;
+                            break;
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            this.keys.down = true;
+                            break;
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            this.keys.left = true;
+                            break;
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            this.keys.right = true;
+                            break;
+                        case 'Space':
+                            e.preventDefault();
+                            this.performAction();
+                            break;
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    switch(e.code) {
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            this.keys.up = false;
+                            break;
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            this.keys.down = false;
+                            break;
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            this.keys.left = false;
+                            break;
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            this.keys.right = false;
+                            break;
+                    }
+                });
+            }
+
+            performAction() {
+                // Start jump animation if not already jumping
+                if (!this.player.isJumping) {
+                    this.player.isJumping = true;
+                    this.player.jumpHeight = 0;
+                    this.player.jumpSpeed = 15; // Initial jump velocity
+                }
+            }
+
+            update() {
+                // Update canvas dimensions in case of resize
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvasWidth = rect.width;
+                this.canvasHeight = rect.height;
+                
+                // Check if player is moving
+                this.player.isMoving = this.keys.up || this.keys.down || this.keys.left || this.keys.right;
+                
+                // Update animation frame
+                if (this.player.isMoving) {
+                    this.player.animationFrame += this.player.animationSpeed;
+                    if (this.player.animationFrame >= 4) {
+                        this.player.animationFrame = 0;
+                    }
+                } else {
+                    this.player.animationFrame = 0;
+                }
+                
+                // Update jump animation
+                if (this.player.isJumping) {
+                    this.player.jumpHeight += this.player.jumpSpeed;
+                    this.player.jumpSpeed -= 1; // Gravity
+                    
+                    // Land when jump height goes back to 0 or below
+                    if (this.player.jumpHeight <= 0) {
+                        this.player.jumpHeight = 0;
+                        this.player.isJumping = false;
+                        this.player.jumpSpeed = 0;
+                        // Reset size to original
+                        this.player.width = this.player.originalWidth;
+                        this.player.height = this.player.originalHeight;
+                    } else {
+                        // Make character slightly bigger while jumping
+                        this.player.width = this.player.originalWidth + 20;
+                        this.player.height = this.player.originalHeight + 20;
+                    }
+                }
+                
+                // Update player position based on input
+                if (this.keys.up) {
+                    this.player.y -= this.player.speed;
+                    this.player.facing = 'up';
+                }
+                if (this.keys.down) {
+                    this.player.y += this.player.speed;
+                    this.player.facing = 'down';
+                }
+                if (this.keys.left) {
+                    this.player.x -= this.player.speed;
+                    this.player.facing = 'left';
+                }
+                if (this.keys.right) {
+                    this.player.x += this.player.speed;
+                    this.player.facing = 'right';
+                }
+
+                // Keep player within canvas bounds using actual canvas dimensions
+                this.player.x = Math.max(0, Math.min(this.canvasWidth - this.player.width, this.player.x));
+                this.player.y = Math.max(0, Math.min(this.canvasHeight - this.player.height, this.player.y));
+            }
+
+            drawPlayer() {
+                this.ctx.save();
+                
+                // Calculate animation offset for walking effect
+                const walkOffset = this.player.isMoving ? Math.sin(this.player.animationFrame * Math.PI) * 3 : 0;
+                const bobOffset = this.player.isMoving ? Math.sin(this.player.animationFrame * Math.PI * 2) * 2 : 0;
+                
+                // Apply jump height offset
+                const jumpOffset = -this.player.jumpHeight;
+                
+                // Player body (round/fat appearance) - much bigger
+                this.ctx.fillStyle = this.player.color;
+                this.ctx.beginPath();
+                this.ctx.ellipse(
+                    this.player.x + this.player.width / 2,
+                    this.player.y + this.player.height / 2 + bobOffset + jumpOffset,
+                    this.player.width / 2,
+                    this.player.height / 2,
+                    0, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Player face - bigger
+                this.ctx.fillStyle = '#FFDBAC';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    this.player.x + this.player.width / 2,
+                    this.player.y + this.player.height / 3 + bobOffset + jumpOffset,
+                    this.player.width / 3,
+                    0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Eyes - bigger
+                this.ctx.fillStyle = '#000';
+                this.ctx.beginPath();
+                this.ctx.arc(this.player.x + this.player.width / 2 - 15, this.player.y + this.player.height / 3 - 8 + bobOffset + jumpOffset, 4, 0, Math.PI * 2);
+                this.ctx.arc(this.player.x + this.player.width / 2 + 15, this.player.y + this.player.height / 3 - 8 + bobOffset + jumpOffset, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Smile - bigger
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(this.player.x + this.player.width / 2, this.player.y + this.player.height / 3 + 5 + bobOffset + jumpOffset, 18, 0, Math.PI);
+                this.ctx.stroke();
+
+                // Arms with walking animation
+                this.ctx.fillStyle = '#FFDBAC';
+                this.ctx.beginPath();
+                // Left arm
+                this.ctx.arc(
+                    this.player.x + this.player.width / 4 + (this.player.facing === 'left' ? walkOffset : -walkOffset),
+                    this.player.y + this.player.height / 2 + bobOffset + jumpOffset,
+                    12, 0, Math.PI * 2
+                );
+                // Right arm
+                this.ctx.arc(
+                    this.player.x + (this.player.width * 3) / 4 + (this.player.facing === 'right' ? walkOffset : -walkOffset),
+                    this.player.y + this.player.height / 2 + bobOffset + jumpOffset,
+                    12, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Legs with walking animation
+                this.ctx.fillStyle = '#654321';
+                this.ctx.beginPath();
+                // Left leg
+                this.ctx.arc(
+                    this.player.x + this.player.width / 3 + walkOffset,
+                    this.player.y + (this.player.height * 4) / 5 + bobOffset + jumpOffset,
+                    10, 0, Math.PI * 2
+                );
+                // Right leg
+                this.ctx.arc(
+                    this.player.x + (this.player.width * 2) / 3 - walkOffset,
+                    this.player.y + (this.player.height * 4) / 5 + bobOffset + jumpOffset,
+                    10, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Draw shadow when jumping
+                if (this.player.isJumping && this.player.jumpHeight > 0) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(
+                        this.player.x + this.player.width / 2,
+                        this.player.y + this.player.height + 5,
+                        this.player.width / 3,
+                        this.player.height / 8,
+                        0, 0, Math.PI * 2
+                    );
+                    this.ctx.fill();
+                }
+
+                this.ctx.restore();
+            }
+
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grass background
+                this.ctx.fillStyle = this.grassPattern;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw some decorative elements
+                this.drawEnvironment();
+                
+                // Draw player
+                this.drawPlayer();
+            }
+
+            drawEnvironment() {
+                // Add some flowers and mushrooms scattered around - made bigger to match character scale
+                this.ctx.save();
+                
+                // More flowers spread across a larger area
+                const flowers = [
+                    {x: 100, y: 150, color: '#FF69B4'},
+                    {x: 300, y: 400, color: '#FFD700'},
+                    {x: 600, y: 200, color: '#FF4500'},
+                    {x: 200, y: 500, color: '#9370DB'},
+                    {x: 700, y: 450, color: '#FF1493'},
+                    {x: 500, y: 100, color: '#00CED1'},
+                    {x: 800, y: 300, color: '#FF6347'},
+                    {x: 1000, y: 150, color: '#FF69B4'},
+                    {x: 1200, y: 400, color: '#FFD700'},
+                    {x: 1400, y: 250, color: '#FF4500'},
+                    {x: 150, y: 700, color: '#9370DB'},
+                    {x: 900, y: 600, color: '#FF1493'},
+                    {x: 1100, y: 500, color: '#00CED1'},
+                    {x: 1300, y: 600, color: '#FF6347'}
+                ];
+
+                flowers.forEach(flower => {
+                    this.ctx.fillStyle = flower.color;
+                    for (let i = 0; i < 5; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(
+                            flower.x + Math.cos(i * Math.PI * 2 / 5) * 8,
+                            flower.y + Math.sin(i * Math.PI * 2 / 5) * 8,
+                            6, 0, Math.PI * 2
+                        );
+                        this.ctx.fill();
+                    }
+                    
+                    // Flower center
+                    this.ctx.fillStyle = '#FFD700';
+                    this.ctx.beginPath();
+                    this.ctx.arc(flower.x, flower.y, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                this.ctx.restore();
+            }
+
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Start the game when page loads
+        window.addEventListener('load', () => {
+            new Game();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            setTimeout(() => {
+                const canvas = document.getElementById('gameCanvas');
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+            }, 100);
+        });
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
