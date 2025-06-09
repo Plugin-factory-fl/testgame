@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grassy Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2d5016, #4a7c27);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #333;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(45deg, #4CAF50, #66BB6A);
+            touch-action: none;
+        }
+
+        .game-info {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+
+        .controls-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .dpad {
+            position: absolute;
+            bottom: 32px;
+            left: 32px;
+            width: 192px;
+            height: 192px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 4px;
+            pointer-events: auto;
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.075s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .dpad-btn:active {
+            background: rgba(200, 200, 200, 0.9);
+            transform: scale(0.95);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-center { 
+            grid-column: 2; 
+            grid-row: 2; 
+            background: rgba(100, 100, 100, 0.3);
+            pointer-events: none;
+        }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+
+        .action-buttons {
+            position: absolute;
+            bottom: 32px;
+            right: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            pointer-events: auto;
+        }
+
+        .action-btn {
+            width: 128px;
+            height: 128px;
+            border: none;
+            border-radius: 50%;
+            font-size: 40px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.075s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .action-btn.attack {
+            background: linear-gradient(145deg, #ff6b6b, #ff5252);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .action-btn.enter {
+            background: linear-gradient(145deg, #4fc3f7, #29b6f6);
+            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.5);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Landscape orientation optimizations */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .dpad {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            .action-buttons {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .action-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 32px;
+            }
+
+            .game-info {
+                font-size: 16px;
+                top: 10px;
+                left: 10px;
+            }
+        }
+
+        /* Portrait orientation optimizations */
+        @media (orientation: portrait) {
+            .dpad {
+                width: 180px;
+                height: 180px;
+                bottom: 40px;
+                left: 20px;
+            }
+            
+            .action-buttons {
+                bottom: 40px;
+                right: 20px;
+            }
+
+            .action-btn {
+                width: 120px;
+                height: 120px;
+                font-size: 36px;
+            }
+        }
+
+        /* Small screens */
+        @media (max-width: 480px) {
+            .dpad {
+                width: 160px;
+                height: 160px;
+                bottom: 20px;
+                left: 16px;
+            }
+            
+            .action-buttons {
+                bottom: 20px;
+                right: 16px;
+            }
+
+            .action-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 32px;
+            }
+
+            .game-info {
+                font-size: 14px;
+                top: 8px;
+                left: 8px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 360px) {
+            .dpad {
+                width: 140px;
+                height: 140px;
+                bottom: 16px;
+                left: 12px;
+            }
+            
+            .action-buttons {
+                bottom: 16px;
+                right: 12px;
+            }
+
+            .action-btn {
+                width: 90px;
+                height: 90px;
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="game-info">
+            <div>Grassy Adventure</div>
+            <div style="font-size: 14px; margin-top: 4px;">Find the School Building!</div>
+            <div style="font-size: 12px; margin-top: 2px; opacity: 0.8;">Press E near door to enter</div>
+        </div>
+
+        <div class="controls-container">
+            <div class="dpad">
+                <div></div>
+                <button class="dpad-btn dpad-up" data-direction="up">▲</button>
+                <div></div>
+                <button class="dpad-btn dpad-left" data-direction="left">◀</button>
+                <div class="dpad-btn dpad-center"></div>
+                <button class="dpad-btn dpad-right" data-direction="right">▶</button>
+                <div></div>
+                <button class="dpad-btn dpad-down" data-direction="down">▼</button>
+                <div></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn attack">A</button>
+                <button class="action-btn enter">E</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.setupCanvas();
+                
+                // Create a massive world - 10x larger than viewport
+                this.worldWidth = Math.max(window.innerWidth * 10, 8000);
+                this.worldHeight = Math.max(window.innerHeight * 10, 6000);
+                
+                // Set zoom level - smaller values = more zoomed out view
+                this.zoomLevel = window.innerWidth < 768 ? 0.7 : 0.8; // More zoomed out on mobile
+                
+                // Building in the center of the world
+                this.building = {
+                    x: this.worldWidth / 2 - 300, // Center horizontally
+                    y: this.worldHeight / 2 - 200, // Center vertically
+                    width: 600,
+                    height: 400,
+                    doorX: this.worldWidth / 2 - 40, // Door centered on building
+                    doorY: this.worldHeight / 2 + 200 - 100, // Door positioned properly on building
+                    doorWidth: 80,
+                    doorHeight: 120
+                };
+
+                this.isInsideBuilding = false;
+                
+                this.player = {
+                    x: this.worldWidth / 2 - 60, // Center horizontally
+                    y: this.worldHeight - 300, // Near bottom of world
+                    width: 120,
+                    height: 140,
+                    speed: 8, // Increased speed for larger world
+                    color: '#8B4513',
+                    facing: 'up', // Start facing up toward the building
+                    isMoving: false,
+                    animationFrame: 0,
+                    animationSpeed: 0.2,
+                    isSwinging: false,
+                    swingAngle: 0,
+                    swingProgress: 0,
+                    swingSpeed: 0.04, // MUCH slower for dramatic, visible swing
+                    health: 100,
+                    maxHealth: 100,
+                    weapon: {
+                        type: 'battle-axe',
+                        color: '#8B4513', // Brown wooden handle
+                        length: 220, // Longer handle for battle axe
+                        width: 14, // Thicker handle
+                        axeHeadSize: 45, // Large double-headed axe
+                        metalColor: '#C0C0C0' // Silver metal for axe heads
+                    }
+                };
+
+                this.keys = {
+                    up: false,
+                    down: false,
+                    left: false,
+                    right: false
+                };
+
+                // Game state
+                this.alarmTriggered = false;
+                this.alarmFlashTime = 0;
+                this.gameWon = false;
+                this.gameOver = false;
+                this.respawnTimer = 0;
+                this.money = 0;
+                this.level = 1;
+                this.levelTransition = false;
+                this.transitionTimer = 0;
+
+                this.grassPattern = this.createGrassPattern();
+                this.flowers = this.generateStaticFlowers(); // Generate flowers once
+                this.generateLevel();
+                this.setupControls();
+                this.gameLoop();
+            }
+
+            generateLevel() {
+                // Generate trees in a large perimeter around the building
+                this.trees = [];
+                const buildingCenterX = this.building.x + this.building.width / 2;
+                const buildingCenterY = this.building.y + this.building.height / 2;
+                const innerRadius = 400; // Minimum distance from building center
+                const outerRadius = 600; // Maximum distance from building center
+                const treeCount = 80 + (this.level * 10); // More trees each level
+
+                for (let i = 0; i < treeCount; i++) {
+                    let x, y, distance;
+                    let attempts = 0;
+                    
+                    do {
+                        const angle = Math.random() * Math.PI * 2;
+                        distance = innerRadius + Math.random() * (outerRadius - innerRadius);
+                        x = buildingCenterX + Math.cos(angle) * distance;
+                        y = buildingCenterY + Math.sin(angle) * distance;
+                        attempts++;
+                    } while (attempts < 50 && (
+                        x < 100 || x > this.worldWidth - 100 || 
+                        y < 100 || y > this.worldHeight - 100 ||
+                        this.trees.some(tree => Math.sqrt((tree.x - x) ** 2 + (tree.y - y) ** 2) < 80)
+                    ));
+
+                    if (attempts < 50) {
+                        this.trees.push({
+                            x: x,
+                            y: y,
+                            health: 20 + (this.level * 2), // Trees get stronger each level
+                            maxHealth: 20 + (this.level * 2)
+                        });
+                    }
+                }
+
+                // Generate circles inside the building
+                this.circles = [];
+                const circleCount = 3 + Math.floor(this.level / 3); // More circles every 3 levels
+                for (let i = 0; i < circleCount; i++) {
+                    this.circles.push({
+                        x: this.building.x + 100 + Math.random() * (this.building.width - 200),
+                        y: this.building.y + 100 + Math.random() * (this.building.height - 200),
+                        radius: 30,
+                        health: 30 + (this.level * 5), // Circles get stronger each level
+                        maxHealth: 30 + (this.level * 5),
+                        flashTime: 0
+                    });
+                }
+
+                // Generate guards around the building
+                this.guards = [];
+                const guardCount = 4 + Math.floor(this.level / 2); // More guards every 2 levels
+                for (let i = 0; i < guardCount; i++) {
+                    const angle = (i / guardCount) * Math.PI * 2;
+                    const radius = 350;
+                    const centerX = buildingCenterX + Math.cos(angle) * radius;
+                    const centerY = buildingCenterY + Math.sin(angle) * radius;
+                    
+                    this.guards.push({
+                        x: centerX,
+                        y: centerY,
+                        angle: 0,
+                        centerX: centerX,
+                        centerY: centerY,
+                        radius: 100,
+                        shootCooldown: 0,
+                        health: 50 + (this.level * 10), // Guards get stronger each level
+                        maxHealth: 50 + (this.level * 10),
+                        flashTime: 0
+                    });
+                }
+
+                this.bullets = [];
+                this.alarmTriggered = false;
+                this.gameWon = false;
+                this.gameOver = false;
+                this.levelTransition = false;
+                this.transitionTimer = 0;
+            }
+
+            setupCanvas() {
+                // Make canvas fill the entire viewport
+                this.canvas.width = window.innerWidth * window.devicePixelRatio;
+                this.canvas.height = window.innerHeight * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                this.canvas.style.width = window.innerWidth + 'px';
+                this.canvas.style.height = window.innerHeight + 'px';
+            }
+
+            createGrassPattern() {
+                const patternCanvas = document.createElement('canvas');
+                patternCanvas.width = 200; // Larger pattern for better detail
+                patternCanvas.height = 200;
+                const patternCtx = patternCanvas.getContext('2d');
+                
+                // Base grass color
+                patternCtx.fillStyle = '#4CAF50';
+                patternCtx.fillRect(0, 0, 200, 200);
+                
+                // Add grass texture
+                for (let i = 0; i < 400; i++) {
+                    const x = Math.random() * 200;
+                    const y = Math.random() * 200;
+                    const length = Math.random() * 12 + 6;
+                    
+                    patternCtx.strokeStyle = `hsl(${120 + Math.random() * 40}, 60%, ${35 + Math.random() * 20}%)`;
+                    patternCtx.lineWidth = 1.5;
+                    patternCtx.beginPath();
+                    patternCtx.moveTo(x, y);
+                    patternCtx.lineTo(x + Math.random() * 6 - 3, y - length);
+                    patternCtx.stroke();
+                }
+                
+                return this.ctx.createPattern(patternCanvas, 'repeat');
+            }
+
+            generateStaticFlowers() {
+                const flowers = [];
+                const colors = ['#FF69B4', '#FFD700', '#FF4500', '#9370DB', '#FF1493', '#00CED1', '#FF6347'];
+                
+                // Create a grid of flowers across the massive world - GENERATED ONCE
+                for (let x = 200; x < this.worldWidth - 200; x += 300) {
+                    for (let y = 200; y < this.worldHeight - 200; y += 300) {
+                        // Don't place flowers too close to the building
+                        if (x > this.building.x - 100 && x < this.building.x + this.building.width + 100 &&
+                            y > this.building.y - 100 && y < this.building.y + this.building.height + 100) {
+                            continue;
+                        }
+
+                        // Add some randomness to flower positions (but consistent)
+                        const offsetX = (Math.random() - 0.5) * 200;
+                        const offsetY = (Math.random() - 0.5) * 200;
+                        
+                        flowers.push({
+                            x: x + offsetX,
+                            y: y + offsetY,
+                            color: colors[Math.floor(Math.random() * colors.length)]
+                        });
+                    }
+                }
+                
+                return flowers;
+            }
+
+            setupControls() {
+                // D-pad controls
+                const dpadButtons = document.querySelectorAll('.dpad-btn[data-direction]');
+                dpadButtons.forEach(button => {
+                    const direction = button.dataset.direction;
+                    
+                    button.addEventListener('mousedown', () => this.keys[direction] = true);
+                    button.addEventListener('mouseup', () => this.keys[direction] = false);
+                    button.addEventListener('mouseleave', () => this.keys[direction] = false);
+                    
+                    button.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.keys[direction] = true;
+                    });
+                    button.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        this.keys[direction] = false;
+                    });
+                });
+
+                // Action buttons
+                const attackBtn = document.querySelector('.action-btn.attack');
+                attackBtn.addEventListener('click', () => this.performAction());
+                attackBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.performAction();
+                });
+
+                const enterBtn = document.querySelector('.action-btn.enter');
+                enterBtn.addEventListener('click', () => this.tryEnterBuilding());
+                enterBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.tryEnterBuilding();
+                });
+
+                // Keyboard controls for desktop
+                document.addEventListener('keydown', (e) => {
+                    switch(e.code) {
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            this.keys.up = true;
+                            break;
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            this.keys.down = true;
+                            break;
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            this.keys.left = true;
+                            break;
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            this.keys.right = true;
+                            break;
+                        case 'Space':
+                            e.preventDefault();
+                            this.performAction();
+                            break;
+                        case 'KeyE':
+                            e.preventDefault();
+                            this.tryEnterBuilding();
+                            break;
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    switch(e.code) {
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            this.keys.up = false;
+                            break;
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            this.keys.down = false;
+                            break;
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            this.keys.left = false;
+                            break;
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            this.keys.right = false;
+                            break;
+                    }
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    // Update world size if needed
+                    this.worldWidth = Math.max(window.innerWidth * 10, 8000);
+                    this.worldHeight = Math.max(window.innerHeight * 10, 6000);
+                    // Update zoom level based on screen size
+                    this.zoomLevel = window.innerWidth < 768 ? 0.7 : 0.8;
+                });
+            }
+
+            canEnterBuilding() {
+                // Check if there are trees blocking the door area
+                const doorArea = {
+                    x: this.building.doorX - 50,
+                    y: this.building.doorY - 50,
+                    width: this.building.doorWidth + 100,
+                    height: this.building.doorHeight + 100
+                };
+
+                return !this.trees.some(tree => 
+                    tree.x > doorArea.x && tree.x < doorArea.x + doorArea.width &&
+                    tree.y > doorArea.y && tree.y < doorArea.y + doorArea.height
+                );
+            }
+
+            tryEnterBuilding() {
+                if (this.gameOver || this.levelTransition) return;
+
+                if (!this.canEnterBuilding()) {
+                    return; // Can't enter if trees are blocking
+                }
+
+                // Check if player is near the door
+                const playerCenterX = this.player.x + this.player.width / 2;
+                const playerCenterY = this.player.y + this.player.height / 2;
+                
+                const doorCenterX = this.building.doorX + this.building.doorWidth / 2;
+                const doorCenterY = this.building.doorY + this.building.doorHeight / 2;
+                
+                const distance = Math.sqrt(
+                    Math.pow(playerCenterX - doorCenterX, 2) + 
+                    Math.pow(playerCenterY - doorCenterY, 2)
+                );
+                
+                if (distance < 100) { // Within interaction range
+                    this.isInsideBuilding = !this.isInsideBuilding;
+                    
+                    if (this.isInsideBuilding) {
+                        // Move player to inside position (center of building)
+                        this.player.x = this.building.x + this.building.width / 2 - this.player.width / 2;
+                        this.player.y = this.building.y + this.building.height / 2 - this.player.height / 2;
+                    } else {
+                        // Move player back outside the door
+                        this.player.x = this.building.doorX + this.building.doorWidth / 2 - this.player.width / 2;
+                        this.player.y = this.building.doorY + this.building.doorHeight + 20;
+                    }
+                }
+            }
+
+            performAction() {
+                if (this.gameOver || this.levelTransition) return;
+
+                // Start weapon swing animation if not already swinging
+                if (!this.player.isSwinging) {
+                    this.player.isSwinging = true;
+                    this.player.swingProgress = 0;
+                    this.player.swingAngle = this.getSwingStartAngle();
+                    
+                    // Check for tree hits
+                    this.checkTreeHits();
+                    
+                    // Check for circle hits (only when inside building)
+                    if (this.isInsideBuilding) {
+                        this.checkCircleHits();
+                    }
+                    
+                    // Check for guard hits (only when outside and alarm is triggered)
+                    if (!this.isInsideBuilding && this.alarmTriggered) {
+                        this.checkGuardHits();
+                    }
+                }
+            }
+
+            checkTreeHits() {
+                const playerCenterX = this.player.x + this.player.width / 2;
+                const playerCenterY = this.player.y + this.player.height / 2;
+                const weaponRange = this.player.weapon.length;
+
+                this.trees.forEach((tree, index) => {
+                    const distance = Math.sqrt(
+                        Math.pow(tree.x - playerCenterX, 2) + 
+                        Math.pow(tree.y - playerCenterY, 2)
+                    );
+
+                    if (distance < weaponRange) {
+                        tree.health -= 5; // Damage per hit
+                        
+                        // Trigger alarm on first tree hit
+                        if (!this.alarmTriggered) {
+                            this.alarmTriggered = true;
+                        }
+
+                        // Remove tree if health reaches 0
+                        if (tree.health <= 0) {
+                            this.trees.splice(index, 1);
+                        }
+                    }
+                });
+            }
+
+            checkGuardHits() {
+                const playerCenterX = this.player.x + this.player.width / 2;
+                const playerCenterY = this.player.y + this.player.height / 2;
+                const weaponRange = this.player.weapon.length;
+
+                this.guards.forEach((guard, index) => {
+                    const distance = Math.sqrt(
+                        Math.pow(guard.x - playerCenterX, 2) + 
+                        Math.pow(guard.y - playerCenterY, 2)
+                    );
+
+                    if (distance < weaponRange) {
+                        guard.health -= 15; // Damage per hit to guards
+                        guard.flashTime = 0.3; // Flash for 0.3 seconds
+
+                        // Remove guard if health reaches 0
+                        if (guard.health <= 0) {
+                            this.money += 10; // $10 per guard
+                            this.guards.splice(index, 1);
+                        }
+                    }
+                });
+            }
+
+            checkCircleHits() {
+                const playerCenterX = this.player.x + this.player.width / 2;
+                const playerCenterY = this.player.y + this.player.height / 2;
+                const weaponRange = this.player.weapon.length;
+
+                this.circles.forEach((circle, index) => {
+                    const distance = Math.sqrt(
+                        Math.pow(circle.x - playerCenterX, 2) + 
+                        Math.pow(circle.y - playerCenterY, 2)
+                    );
+
+                    if (distance < weaponRange + circle.radius) {
+                        circle.health -= 10; // Damage per hit
+                        circle.flashTime = 0.3; // Flash for 0.3 seconds
+
+                        // Remove circle if health reaches 0
+                        if (circle.health <= 0) {
+                            this.money += 5; // $5 per circle
+                            this.circles.splice(index, 1);
+                        }
+                    }
+                });
+
+                // Check if all circles are destroyed
+                if (this.circles.length === 0 && !this.gameWon) {
+                    this.gameWon = true;
+                    this.levelTransition = true;
+                    this.transitionTimer = 2.0; // 2 second transition
+                }
+            }
+
+            getSwingStartAngle() {
+                // Get starting angle based on facing direction - center the 270° swing on the facing direction
+                // 270° = 3π/2 radians, so we start 135° (3π/4) to the left of center
+                switch(this.player.facing) {
+                    case 'up': return -Math.PI/2 - (3*Math.PI/4); // Center on up (-π/2), start 135° left
+                    case 'down': return Math.PI/2 - (3*Math.PI/4); // Center on down (π/2), start 135° left  
+                    case 'left': return Math.PI - (3*Math.PI/4); // Center on left (π), start 135° left
+                    case 'right': return 0 - (3*Math.PI/4); // Center on right (0), start 135° left
+                    default: return -Math.PI/2 - (3*Math.PI/4); // Default to up
+                }
+            }
+
+            update() {
+                if (this.levelTransition) {
+                    this.transitionTimer -= 1/60; // Assuming 60 FPS
+                    if (this.transitionTimer <= 0) {
+                        this.level++;
+                        this.isInsideBuilding = false;
+                        this.player.x = this.worldWidth / 2 - 60;
+                        this.player.y = this.worldHeight - 300;
+                        this.player.health = this.player.maxHealth; // Restore health
+                        this.generateLevel();
+                    }
+                    return;
+                }
+
+                if (this.gameOver) {
+                    this.respawnTimer -= 1/60; // Assuming 60 FPS
+                    if (this.respawnTimer <= 0) {
+                        // Reset player
+                        this.player.health = this.player.maxHealth;
+                        this.player.x = this.worldWidth / 2 - 60;
+                        this.player.y = this.worldHeight - 300;
+                        this.isInsideBuilding = false;
+                        this.gameOver = false;
+                        this.generateLevel();
+                    }
+                    return;
+                }
+
+                // Update alarm flash
+                if (this.alarmTriggered) {
+                    this.alarmFlashTime += 1/60;
+                }
+
+                // Update circle flash times
+                this.circles.forEach(circle => {
+                    if (circle.flashTime > 0) {
+                        circle.flashTime -= 1/60;
+                    }
+                });
+
+                // Update guard flash times
+                this.guards.forEach(guard => {
+                    if (guard.flashTime > 0) {
+                        guard.flashTime -= 1/60;
+                    }
+                });
+
+                // Check if player is moving
+                this.player.isMoving = this.keys.up || this.keys.down || this.keys.left || this.keys.right;
+                
+                // Update animation frame
+                if (this.player.isMoving) {
+                    this.player.animationFrame += this.player.animationSpeed;
+                    if (this.player.animationFrame >= 4) {
+                        this.player.animationFrame = 0;
+                    }
+                } else {
+                    this.player.animationFrame = 0;
+                }
+                
+                // Update weapon swing animation
+                if (this.player.isSwinging) {
+                    this.player.swingProgress += this.player.swingSpeed;
+                    
+                    // Complete swing when progress reaches 1
+                    if (this.player.swingProgress >= 1) {
+                        this.player.swingProgress = 0;
+                        this.player.isSwinging = false;
+                    }
+                }
+                
+                // Update player position based on input
+                if (this.keys.up) {
+                    this.player.y -= this.player.speed;
+                    this.player.facing = 'up';
+                }
+                if (this.keys.down) {
+                    this.player.y += this.player.speed;
+                    this.player.facing = 'down';
+                }
+                if (this.keys.left) {
+                    this.player.x -= this.player.speed;
+                    this.player.facing = 'left';
+                }
+                if (this.keys.right) {
+                    this.player.x += this.player.speed;
+                    this.player.facing = 'right';
+                }
+
+                // Keep player within bounds
+                if (this.isInsideBuilding) {
+                    // Keep player inside the building
+                    this.player.x = Math.max(this.building.x + 20, Math.min(this.building.x + this.building.width - this.player.width - 20, this.player.x));
+                    this.player.y = Math.max(this.building.y + 20, Math.min(this.building.y + this.building.height - this.player.height - 20, this.player.y));
+                } else {
+                    // Keep player within the massive world bounds
+                    this.player.x = Math.max(0, Math.min(this.worldWidth - this.player.width, this.player.x));
+                    this.player.y = Math.max(0, Math.min(this.worldHeight - this.player.height, this.player.y));
+                    
+                    // Tree collision detection
+                    const playerCenterX = this.player.x + this.player.width / 2;
+                    const playerCenterY = this.player.y + this.player.height / 2;
+                    
+                    this.trees.forEach(tree => {
+                        const distance = Math.sqrt(
+                            Math.pow(tree.x - playerCenterX, 2) + 
+                            Math.pow(tree.y - playerCenterY, 2)
+                        );
+                        
+                        if (distance < 60) { // Tree collision radius
+                            // Push player away from tree
+                            const angle = Math.atan2(playerCenterY - tree.y, playerCenterX - tree.x);
+                            const pushDistance = 60 - distance;
+                            this.player.x += Math.cos(angle) * pushDistance;
+                            this.player.y += Math.sin(angle) * pushDistance;
+                        }
+                    });
+                    
+                    // Building collision detection (can't walk through building)
+                    if (this.player.x + this.player.width > this.building.x &&
+                        this.player.x < this.building.x + this.building.width &&
+                        this.player.y + this.player.height > this.building.y &&
+                        this.player.y < this.building.y + this.building.height) {
+                        
+                        // Check if player is trying to enter through the door
+                        if (this.player.x + this.player.width > this.building.doorX &&
+                            this.player.x < this.building.doorX + this.building.doorWidth &&
+                            this.player.y + this.player.height > this.building.doorY &&
+                            this.player.y < this.building.doorY + this.building.doorHeight) {
+                            // Allow movement through door
+                        } else {
+                            // Push player back from building walls
+                            const overlapLeft = (this.player.x + this.player.width) - this.building.x;
+                            const overlapRight = (this.building.x + this.building.width) - this.player.x;
+                            const overlapTop = (this.player.y + this.player.height) - this.building.y;
+                            const overlapBottom = (this.building.y + this.building.height) - this.player.y;
+                            
+                            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                            
+                            if (minOverlap === overlapLeft) {
+                                this.player.x = this.building.x - this.player.width;
+                            } else if (minOverlap === overlapRight) {
+                                this.player.x = this.building.x + this.building.width;
+                            } else if (minOverlap === overlapTop) {
+                                this.player.y = this.building.y - this.player.height;
+                            } else if (minOverlap === overlapBottom) {
+                                this.player.y = this.building.y + this.building.height;
+                            }
+                        }
+                    }
+                }
+
+                // Update guards
+                if (this.alarmTriggered && !this.isInsideBuilding) {
+                    this.guards.forEach(guard => {
+                        // Move guard in circle
+                        guard.angle += 0.02;
+                        guard.x = guard.centerX + Math.cos(guard.angle) * guard.radius;
+                        guard.y = guard.centerY + Math.sin(guard.angle) * guard.radius;
+
+                        // Shoot at player
+                        guard.shootCooldown -= 1/60;
+                        if (guard.shootCooldown <= 0) {
+                            const playerCenterX = this.player.x + this.player.width / 2;
+                            const playerCenterY = this.player.y + this.player.height / 2;
+                            const distance = Math.sqrt(
+                                Math.pow(guard.x - playerCenterX, 2) + 
+                                Math.pow(guard.y - playerCenterY, 2)
+                            );
+
+                            if (distance < 800) { // Shooting range
+                                const angle = Math.atan2(playerCenterY - guard.y, playerCenterX - guard.x);
+                                this.bullets.push({
+                                    x: guard.x,
+                                    y: guard.y,
+                                    dx: Math.cos(angle),
+                                    dy: Math.sin(angle),
+                                    speed: 300
+                                });
+                                guard.shootCooldown = 1.0; // 1 second cooldown
+                            }
+                        }
+                    });
+                }
+
+                // Update bullets
+                this.bullets.forEach((bullet, index) => {
+                    bullet.x += bullet.dx * bullet.speed * (1/60);
+                    bullet.y += bullet.dy * bullet.speed * (1/60);
+
+                    // Check collision with player
+                    const playerCenterX = this.player.x + this.player.width / 2;
+                    const playerCenterY = this.player.y + this.player.height / 2;
+                    const distance = Math.sqrt(
+                        Math.pow(bullet.x - playerCenterX, 2) + 
+                        Math.pow(bullet.y - playerCenterY, 2)
+                    );
+
+                    if (distance < 30) {
+                        this.player.health -= 4; // Reduced damage
+                        this.bullets.splice(index, 1);
+                        
+                        if (this.player.health <= 0) {
+                            this.gameOver = true;
+                            this.respawnTimer = 3.0; // 3 second respawn timer
+                        }
+                    }
+
+                    // Remove bullets that are off screen
+                    if (bullet.x < 0 || bullet.x > this.worldWidth || 
+                        bullet.y < 0 || bullet.y > this.worldHeight) {
+                        this.bullets.splice(index, 1);
+                    }
+                });
+            }
+
+            drawBuilding(cameraX, cameraY) {
+                if (this.isInsideBuilding) {
+                    // Draw interior - simple empty room
+                    this.ctx.fillStyle = '#F5F5DC'; // Beige floor
+                    this.ctx.fillRect(this.building.x, this.building.y, this.building.width, this.building.height);
+                    
+                    // Interior walls
+                    this.ctx.strokeStyle = '#8B4513';
+                    this.ctx.lineWidth = 8;
+                    this.ctx.strokeRect(this.building.x, this.building.y, this.building.width, this.building.height);
+                    
+                    // Add some interior details
+                    this.ctx.fillStyle = '#DDD';
+                    // Simple windows from inside
+                    for (let i = 0; i < 4; i++) {
+                        this.ctx.fillRect(this.building.x + 50 + i * 130, this.building.y + 20, 80, 60);
+                        this.ctx.fillRect(this.building.x + 50 + i * 130, this.building.y + this.building.height - 80, 80, 60);
+                    }
+                    
+                } else {
+                    // Only draw building if it's visible on screen
+                    const visibleWidth = window.innerWidth / this.zoomLevel;
+                    const visibleHeight = window.innerHeight / this.zoomLevel;
+                    
+                    if (this.building.x < cameraX + visibleWidth + 200 &&
+                        this.building.x + this.building.width > cameraX - 200 &&
+                        this.building.y < cameraY + visibleHeight + 200 &&
+                        this.building.y + this.building.height > cameraY - 200) {
+                        
+                        // Building exterior
+                        // Main building structure
+                        this.ctx.fillStyle = '#CD853F'; // Sandy brown
+                        this.ctx.fillRect(this.building.x, this.building.y, this.building.width, this.building.height);
+                        
+                        // Building outline
+                        this.ctx.strokeStyle = '#8B4513';
+                        this.ctx.lineWidth = 6;
+                        this.ctx.strokeRect(this.building.x, this.building.y, this.building.width, this.building.height);
+                        
+                        // Roof
+                        this.ctx.fillStyle = '#A0522D';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.building.x - 20, this.building.y);
+                        this.ctx.lineTo(this.building.x + this.building.width / 2, this.building.y - 60);
+                        this.ctx.lineTo(this.building.x + this.building.width + 20, this.building.y);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        this.ctx.stroke();
+                        
+                        // Windows - arranged in a grid like a school
+                        this.ctx.fillStyle = '#87CEEB'; // Sky blue windows
+                        this.ctx.strokeStyle = '#654321';
+                        this.ctx.lineWidth = 3;
+                        
+                        // Top row of windows
+                        for (let i = 0; i < 4; i++) {
+                            const windowX = this.building.x + 50 + i * 130;
+                            const windowY = this.building.y + 40;
+                            this.ctx.fillRect(windowX, windowY, 80, 60);
+                            this.ctx.strokeRect(windowX, windowY, 80, 60);
+                            
+                            // Window cross
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(windowX + 40, windowY);
+                            this.ctx.lineTo(windowX + 40, windowY + 60);
+                            this.ctx.moveTo(windowX, windowY + 30);
+                            this.ctx.lineTo(windowX + 80, windowY + 30);
+                            this.ctx.stroke();
+                        }
+                        
+                        // Bottom row of windows
+                        for (let i = 0; i < 4; i++) {
+                            const windowX = this.building.x + 50 + i * 130;
+                            const windowY = this.building.y + 200;
+                            this.ctx.fillRect(windowX, windowY, 80, 60);
+                            this.ctx.strokeRect(windowX, windowY, 80, 60);
+                            
+                            // Window cross
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(windowX + 40, windowY);
+                            this.ctx.lineTo(windowX + 40, windowY + 60);
+                            this.ctx.moveTo(windowX, windowY + 30);
+                            this.ctx.lineTo(windowX + 80, windowY + 30);
+                            this.ctx.stroke();
+                        }
+                        
+                        // Front door
+                        this.ctx.fillStyle = '#654321'; // Dark brown door
+                        this.ctx.fillRect(this.building.doorX, this.building.doorY, this.building.doorWidth, this.building.doorHeight);
+                        this.ctx.strokeStyle = '#4A4A4A';
+                        this.ctx.lineWidth = 4;
+                        this.ctx.strokeRect(this.building.doorX, this.building.doorY, this.building.doorWidth, this.building.doorHeight);
+                        
+                        // Door handle
+                        this.ctx.fillStyle = '#FFD700'; // Gold handle
+                        this.ctx.beginPath();
+                        this.ctx.arc(this.building.doorX + this.building.doorWidth - 15, this.building.doorY + this.building.doorHeight / 2, 6, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Door panels
+                        this.ctx.strokeStyle = '#4A4A4A';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.strokeRect(this.building.doorX + 10, this.building.doorY + 10, this.building.doorWidth - 20, this.building.doorHeight / 2 - 15);
+                        this.ctx.strokeRect(this.building.doorX + 10, this.building.doorY + this.building.doorHeight / 2 + 5, this.building.doorWidth - 20, this.building.doorHeight / 2 - 15);
+                        
+                        // School sign
+                        this.ctx.fillStyle = '#FFF';
+                        this.ctx.fillRect(this.building.x + this.building.width / 2 - 100, this.building.y + 120, 200, 40);
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.strokeRect(this.building.x + this.building.width / 2 - 100, this.building.y + 120, 200, 40);
+                        
+                        this.ctx.fillStyle = '#000';
+                        this.ctx.font = 'bold 24px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText('SCHOOL', this.building.x + this.building.width / 2, this.building.y + 145);
+                    }
+                }
+            }
+
+            drawTrees(cameraX, cameraY) {
+                const visibleWidth = window.innerWidth / this.zoomLevel;
+                const visibleHeight = window.innerHeight / this.zoomLevel;
+
+                this.trees.forEach(tree => {
+                    // Only draw trees that are visible on screen
+                    if (tree.x > cameraX - 100 && tree.x < cameraX + visibleWidth + 100 &&
+                        tree.y > cameraY - 100 && tree.y < cameraY + visibleHeight + 100) {
+                        
+                        // Tree trunk
+                        this.ctx.fillStyle = '#8B4513';
+                        this.ctx.fillRect(tree.x - 15, tree.y - 10, 30, 60);
+                        
+                        // Tree foliage
+                        this.ctx.fillStyle = '#228B22';
+                        this.ctx.beginPath();
+                        this.ctx.arc(tree.x, tree.y - 20, 40, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Health bar
+                        if (tree.health < tree.maxHealth) {
+                            const barWidth = 60;
+                            const barHeight = 8;
+                            const healthPercent = tree.health / tree.maxHealth;
+                            
+                            // Background
+                            this.ctx.fillStyle = '#FF0000';
+                            this.ctx.fillRect(tree.x - barWidth/2, tree.y - 80, barWidth, barHeight);
+                            
+                            // Health
+                            this.ctx.fillStyle = '#00FF00';
+                            this.ctx.fillRect(tree.x - barWidth/2, tree.y - 80, barWidth * healthPercent, barHeight);
+                            
+                            // Border
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.strokeRect(tree.x - barWidth/2, tree.y - 80, barWidth, barHeight);
+                        }
+                    }
+                });
+            }
+
+            drawCircles() {
+                this.circles.forEach(circle => {
+                    // Flash effect when taking damage
+                    if (circle.flashTime > 0) {
+                        this.ctx.fillStyle = '#FFFFFF';
+                    } else {
+                        this.ctx.fillStyle = '#FF0000';
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.strokeStyle = '#800000';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.stroke();
+                    
+                    // Health bar
+                    const barWidth = 80;
+                    const barHeight = 10;
+                    const healthPercent = circle.health / circle.maxHealth;
+                    
+                    // Background
+                    this.ctx.fillStyle = '#FF0000';
+                    this.ctx.fillRect(circle.x - barWidth/2, circle.y - circle.radius - 20, barWidth, barHeight);
+                    
+                    // Health
+                    this.ctx.fillStyle = '#00FF00';
+                    this.ctx.fillRect(circle.x - barWidth/2, circle.y - circle.radius - 20, barWidth * healthPercent, barHeight);
+                    
+                    // Border
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(circle.x - barWidth/2, circle.y - circle.radius - 20, barWidth, barHeight);
+                });
+            }
+
+            drawGuards(cameraX, cameraY) {
+                if (!this.alarmTriggered || this.isInsideBuilding) return;
+
+                const visibleWidth = window.innerWidth / this.zoomLevel;
+                const visibleHeight = window.innerHeight / this.zoomLevel;
+
+                this.guards.forEach(guard => {
+                    // Only draw guards that are visible on screen
+                    if (guard.x > cameraX - 100 && guard.x < cameraX + visibleWidth + 100 &&
+                        guard.y > cameraY - 100 && guard.y < cameraY + visibleHeight + 100) {
+                        
+                        // Flash effect when taking damage
+                        if (guard.flashTime > 0) {
+                            this.ctx.fillStyle = '#FFFFFF';
+                        } else {
+                            this.ctx.fillStyle = '#000080';
+                        }
+                        
+                        // Guard body
+                        this.ctx.fillRect(guard.x - 15, guard.y - 15, 30, 30);
+                        
+                        // Guard head
+                        this.ctx.fillStyle = '#FFDBAC';
+                        this.ctx.beginPath();
+                        this.ctx.arc(guard.x, guard.y - 25, 10, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Guard weapon
+                        this.ctx.strokeStyle = '#654321';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(guard.x, guard.y);
+                        this.ctx.lineTo(guard.x + 20, guard.y - 10);
+                        this.ctx.stroke();
+                        
+                        // Health bar
+                        const barWidth = 60;
+                        const barHeight = 8;
+                        const healthPercent = guard.health / guard.maxHealth;
+                        
+                        // Background
+                        this.ctx.fillStyle = '#FF0000';
+                        this.ctx.fillRect(guard.x - barWidth/2, guard.y - 50, barWidth, barHeight);
+                        
+                        // Health
+                        this.ctx.fillStyle = '#00FF00';
+                        this.ctx.fillRect(guard.x - barWidth/2, guard.y - 50, barWidth * healthPercent, barHeight);
+                        
+                        // Border
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(guard.x - barWidth/2, guard.y - 50, barWidth, barHeight);
+                    }
+                });
+            }
+
+            drawBullets(cameraX, cameraY) {
+                const visibleWidth = window.innerWidth / this.zoomLevel;
+                const visibleHeight = window.innerHeight / this.zoomLevel;
+
+                this.bullets.forEach(bullet => {
+                    // Only draw bullets that are visible on screen
+                    if (bullet.x > cameraX - 50 && bullet.x < cameraX + visibleWidth + 50 &&
+                        bullet.y > cameraY - 50 && bullet.y < cameraY + visibleHeight + 50) {
+                        
+                        this.ctx.fillStyle = '#FFD700';
+                        this.ctx.beginPath();
+                        this.ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                });
+            }
+
+            drawWeapon() {
+                if (!this.player.isSwinging) return;
+
+                this.ctx.save();
+                
+                // Calculate camera offset to center player on screen (accounting for zoom)
+                const cameraX = this.player.x - (window.innerWidth / this.zoomLevel) / 2;
+                const cameraY = this.player.y - (window.innerHeight / this.zoomLevel) / 2;
+                
+                // Calculate player position relative to camera
+                const playerScreenX = (this.player.x - cameraX) * this.zoomLevel;
+                const playerScreenY = (this.player.y - cameraY) * this.zoomLevel;
+                
+                // Scale weapon dimensions by zoom level
+                const scaledLength = this.player.weapon.length * this.zoomLevel;
+                const scaledWidth = this.player.weapon.width * this.zoomLevel;
+                const scaledAxeHeadSize = this.player.weapon.axeHeadSize * this.zoomLevel;
+                
+                // Calculate weapon center point (player center)
+                const weaponCenterX = playerScreenX + (this.player.width * this.zoomLevel) / 2;
+                const weaponCenterY = playerScreenY + (this.player.height * this.zoomLevel) / 2;
+                
+                // Calculate current swing angle (270 degrees = 3/2 * PI radians)
+                const swingRange = (3 * Math.PI) / 2; // 270 degrees
+                const startAngle = this.getSwingStartAngle();
+                const currentAngle = startAngle + (swingRange * this.player.swingProgress);
+                
+                // Calculate weapon end position
+                const weaponEndX = weaponCenterX + Math.cos(currentAngle) * scaledLength;
+                const weaponEndY = weaponCenterY + Math.sin(currentAngle) * scaledLength;
+                
+                // Add motion blur effect for dramatic swing
+                const blurIntensity = Math.sin(this.player.swingProgress * Math.PI) * 0.6;
+                this.ctx.shadowColor = this.player.weapon.metalColor;
+                this.ctx.shadowBlur = blurIntensity * 25;
+                
+                // Draw weapon handle with gradient for depth
+                const handleGradient = this.ctx.createLinearGradient(weaponCenterX, weaponCenterY, weaponEndX, weaponEndY);
+                handleGradient.addColorStop(0, this.player.weapon.color);
+                handleGradient.addColorStop(0.7, '#654321'); // Darker brown
+                handleGradient.addColorStop(1, '#5D4037'); // Even darker at the end
+                
+                this.ctx.strokeStyle = handleGradient;
+                this.ctx.lineWidth = scaledWidth;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(weaponCenterX, weaponCenterY);
+                this.ctx.lineTo(weaponEndX, weaponEndY);
+                this.ctx.stroke();
+                
+                // Calculate axe head position (80% along the handle)
+                const axeHeadRatio = 0.8;
+                const axeHeadX = weaponCenterX + Math.cos(currentAngle) * scaledLength * axeHeadRatio;
+                const axeHeadY = weaponCenterY + Math.sin(currentAngle) * scaledLength * axeHeadRatio;
+                
+                // Calculate perpendicular angle for axe heads
+                const perpAngle = currentAngle + Math.PI / 2;
+                
+                // Enhanced shadow for axe heads
+                this.ctx.shadowBlur = blurIntensity * 30;
+                this.ctx.shadowColor = '#666';
+                
+                // Draw double-headed battle axe
+                this.drawAxeHead(axeHeadX, axeHeadY, perpAngle, scaledAxeHeadSize, true); // Top head
+                this.drawAxeHead(axeHeadX, axeHeadY, perpAngle + Math.PI, scaledAxeHeadSize, false); // Bottom head
+                
+                // Draw handle grip details
+                this.ctx.shadowBlur = 0;
+                this.drawHandleDetails(weaponCenterX, weaponCenterY, weaponEndX, weaponEndY, scaledWidth);
+                
+                this.ctx.restore();
+            }
+
+            drawAxeHead(centerX, centerY, angle, size, isTop) {
+                this.ctx.save();
+                this.ctx.translate(centerX, centerY);
+                this.ctx.rotate(angle);
+                
+                // Create metallic gradient for axe head
+                const metalGradient = this.ctx.createLinearGradient(-size, -size/2, size, size/2);
+                metalGradient.addColorStop(0, '#E8E8E8'); // Light silver
+                metalGradient.addColorStop(0.3, this.player.weapon.metalColor); // Main silver
+                metalGradient.addColorStop(0.7, '#A0A0A0'); // Darker silver
+                metalGradient.addColorStop(1, '#808080'); // Dark edge
+                
+                this.ctx.fillStyle = metalGradient;
+                
+                // Draw axe head shape (curved blade)
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size/4); // Start at handle connection
+                
+                // Curved blade edge
+                this.ctx.quadraticCurveTo(size * 0.8, -size/2, size, 0); // Top curve
+                this.ctx.quadraticCurveTo(size * 0.9, size/3, size * 0.6, size/2); // Cutting edge
+                this.ctx.quadraticCurveTo(size * 0.3, size/3, 0, size/4); // Bottom curve back to handle
+                
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Add sharp edge highlight
+                this.ctx.strokeStyle = '#F0F0F0';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(size * 0.7, -size/3);
+                this.ctx.quadraticCurveTo(size * 0.85, 0, size * 0.7, size/3);
+                this.ctx.stroke();
+                
+                // Add battle damage/notches for realism
+                this.ctx.strokeStyle = '#666';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    const notchY = (i - 1) * size/6;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(size * 0.8, notchY);
+                    this.ctx.lineTo(size * 0.75, notchY + size/20);
+                    this.ctx.stroke();
+                }
+                
+                this.ctx.restore();
+            }
+
+            drawHandleDetails(startX, startY, endX, endY, width) {
+                // Draw leather grip wrapping
+                const gripSections = 8;
+                const handleLength = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+                const angle = Math.atan2(endY - startY, endX - startX);
+                
+                this.ctx.strokeStyle = '#8B4513';
+                this.ctx.lineWidth = width * 0.3;
+                
+                for (let i = 1; i < gripSections; i++) {
+                    const ratio = i / gripSections;
+                    const x = startX + (endX - startX) * ratio;
+                    const y = startY + (endY - startY) * ratio;
+                    
+                    // Draw grip lines perpendicular to handle
+                    const perpX = Math.cos(angle + Math.PI/2) * width * 0.4;
+                    const perpY = Math.sin(angle + Math.PI/2) * width * 0.4;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x - perpX, y - perpY);
+                    this.ctx.lineTo(x + perpX, y + perpY);
+                    this.ctx.stroke();
+                }
+                
+                // Draw metal pommel at handle end
+                this.ctx.fillStyle = this.player.weapon.metalColor;
+                this.ctx.beginPath();
+                this.ctx.arc(startX, startY, width * 0.8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Pommel highlight
+                this.ctx.fillStyle = '#F0F0F0';
+                this.ctx.beginPath();
+                this.ctx.arc(startX - width * 0.2, startY - width * 0.2, width * 0.3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            drawPlayer() {
+                this.ctx.save();
+                
+                // Calculate camera offset to center player on screen (accounting for zoom)
+                const cameraX = this.player.x - (window.innerWidth / this.zoomLevel) / 2;
+                const cameraY = this.player.y - (window.innerHeight / this.zoomLevel) / 2;
+                
+                // Calculate player position relative to camera
+                const playerScreenX = (this.player.x - cameraX) * this.zoomLevel;
+                const playerScreenY = (this.player.y - cameraY) * this.zoomLevel;
+                
+                // Calculate animation offset for walking effect
+                const walkOffset = this.player.isMoving ? Math.sin(this.player.animationFrame * Math.PI) * 3 * this.zoomLevel : 0;
+                const bobOffset = this.player.isMoving ? Math.sin(this.player.animationFrame * Math.PI * 2) * 2 * this.zoomLevel : 0;
+                
+                // Scale all drawing operations by zoom level
+                const scaledWidth = this.player.width * this.zoomLevel;
+                const scaledHeight = this.player.height * this.zoomLevel;
+                
+                // Player body (round/fat appearance) - much bigger
+                this.ctx.fillStyle = this.player.color;
+                this.ctx.beginPath();
+                this.ctx.ellipse(
+                    playerScreenX + scaledWidth / 2,
+                    playerScreenY + scaledHeight / 2 + bobOffset,
+                    scaledWidth / 2,
+                    scaledHeight / 2,
+                    0, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Player face - bigger
+                this.ctx.fillStyle = '#FFDBAC';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    playerScreenX + scaledWidth / 2,
+                    playerScreenY + scaledHeight / 3 + bobOffset,
+                    (scaledWidth / 3),
+                    0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Eyes - bigger
+                this.ctx.fillStyle = '#000';
+                this.ctx.beginPath();
+                this.ctx.arc(playerScreenX + scaledWidth / 2 - 15 * this.zoomLevel, playerScreenY + scaledHeight / 3 - 8 * this.zoomLevel + bobOffset, 4 * this.zoomLevel, 0, Math.PI * 2);
+                this.ctx.arc(playerScreenX + scaledWidth / 2 + 15 * this.zoomLevel, playerScreenY + scaledHeight / 3 - 8 * this.zoomLevel + bobOffset, 4 * this.zoomLevel, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Smile - bigger
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 3 * this.zoomLevel;
+                this.ctx.beginPath();
+                this.ctx.arc(playerScreenX + scaledWidth / 2, playerScreenY + scaledHeight / 3 + 5 * this.zoomLevel + bobOffset, 18 * this.zoomLevel, 0, Math.PI);
+                this.ctx.stroke();
+
+                // Arms with walking animation
+                this.ctx.fillStyle = '#FFDBAC';
+                this.ctx.beginPath();
+                // Left arm
+                this.ctx.arc(
+                    playerScreenX + scaledWidth / 4 + (this.player.facing === 'left' ? walkOffset : -walkOffset),
+                    playerScreenY + scaledHeight / 2 + bobOffset,
+                    12 * this.zoomLevel, 0, Math.PI * 2
+                );
+                // Right arm
+                this.ctx.arc(
+                    playerScreenX + (scaledWidth * 3) / 4 + (this.player.facing === 'right' ? walkOffset : -walkOffset),
+                    playerScreenY + scaledHeight / 2 + bobOffset,
+                    12 * this.zoomLevel, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                // Legs with walking animation
+                this.ctx.fillStyle = '#654321';
+                this.ctx.beginPath();
+                // Left leg
+                this.ctx.arc(
+                    playerScreenX + scaledWidth / 3 + walkOffset,
+                    playerScreenY + (scaledHeight * 4) / 5 + bobOffset,
+                    10 * this.zoomLevel, 0, Math.PI * 2
+                );
+                // Right leg
+                this.ctx.arc(
+                    playerScreenX + (scaledWidth * 2) / 3 - walkOffset,
+                    playerScreenY + (scaledHeight * 4) / 5 + bobOffset,
+                    10 * this.zoomLevel, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                this.ctx.restore();
+            }
+
+            drawUI() {
+                // Player health bar
+                const healthBarWidth = 200;
+                const healthBarHeight = 20;
+                const healthPercent = this.player.health / this.player.maxHealth;
+                
+                // Background
+                this.ctx.fillStyle = '#FF0000';
+                this.ctx.fillRect(20, 60, healthBarWidth, healthBarHeight);
+                
+                // Health
+                this.ctx.fillStyle = '#00FF00';
+                this.ctx.fillRect(20, 60, healthBarWidth * healthPercent, healthBarHeight);
+                
+                // Border
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(20, 60, healthBarWidth, healthBarHeight);
+                
+                // Health text
+                this.ctx.fillStyle = '#FFF';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.fillText(`Health: ${this.player.health}/${this.player.maxHealth}`, 25, 55);
+
+                // Money display
+                this.ctx.fillStyle = '#FFD700';
+                this.ctx.font = 'bold 24px Arial';
+                this.ctx.fillText(`Money: $${this.money}`, 20, 120);
+
+                // Level display
+                this.ctx.fillStyle = '#FFF';
+                this.ctx.font = 'bold 20px Arial';
+                this.ctx.fillText(`Level: ${this.level}`, 20, 150);
+
+                // Alarm status
+                if (this.alarmTriggered) {
+                    const flashAlpha = Math.sin(this.alarmFlashTime * 10) * 0.5 + 0.5;
+                    this.ctx.fillStyle = `rgba(255, 0, 0, ${flashAlpha})`;
+                    this.ctx.font = 'bold 24px Arial';
+                    this.ctx.fillText('🚨 ALARM TRIGGERED! 🚨', window.innerWidth / 2 - 150, 50);
+                }
+
+                // Level transition
+                if (this.levelTransition) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                    
+                    this.ctx.fillStyle = '#FFD700';
+                    this.ctx.font = 'bold 48px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('LEVEL COMPLETE!', window.innerWidth / 2, window.innerHeight / 2 - 50);
+                    
+                    this.ctx.fillStyle = '#FFF';
+                    this.ctx.font = 'bold 32px Arial';
+                    this.ctx.fillText(`Money Earned: $${this.circles.length * 5}`, window.innerWidth / 2, window.innerHeight / 2);
+                    this.ctx.fillText(`Next Level: ${this.level + 1}`, window.innerWidth / 2, window.innerHeight / 2 + 50);
+                    
+                    this.ctx.textAlign = 'left';
+                }
+
+                // Game over screen
+                if (this.gameOver) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                    
+                    this.ctx.fillStyle = '#FF0000';
+                    this.ctx.font = 'bold 48px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('GAME OVER', window.innerWidth / 2, window.innerHeight / 2 - 50);
+                    
+                    this.ctx.fillStyle = '#FFF';
+                    this.ctx.font = 'bold 24px Arial';
+                    this.ctx.fillText(`Respawning in ${Math.ceil(this.respawnTimer)} seconds...`, window.innerWidth / 2, window.innerHeight / 2 + 20);
+                    
+                    this.ctx.textAlign = 'left';
+                }
+            }
+
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Calculate camera offset to center player on screen (accounting for zoom)
+                const cameraX = this.player.x - (window.innerWidth / this.zoomLevel) / 2;
+                const cameraY = this.player.y - (window.innerHeight / this.zoomLevel) / 2;
+                
+                // Draw grass background with camera offset and zoom
+                this.ctx.save();
+                this.ctx.scale(this.zoomLevel, this.zoomLevel);
+                this.ctx.translate(-cameraX, -cameraY);
+                
+                if (this.grassPattern && !this.isInsideBuilding) {
+                    this.ctx.fillStyle = this.grassPattern;
+                    this.ctx.fillRect(0, 0, this.worldWidth, this.worldHeight);
+                } else if (this.isInsideBuilding) {
+                    // Interior background
+                    this.ctx.fillStyle = '#F5F5DC';
+                    this.ctx.fillRect(0, 0, this.worldWidth, this.worldHeight);
+                }
+                
+                // Draw environment elements
+                this.drawEnvironment(cameraX, cameraY);
+                
+                // Draw trees (outside only)
+                if (!this.isInsideBuilding) {
+                    this.drawTrees(cameraX, cameraY);
+                }
+                
+                // Draw building
+                this.drawBuilding(cameraX, cameraY);
+                
+                // Draw guards (outside only)
+                if (!this.isInsideBuilding) {
+                    this.drawGuards(cameraX, cameraY);
+                    this.drawBullets(cameraX, cameraY);
+                }
+                
+                // Draw circles (inside only)
+                if (this.isInsideBuilding) {
+                    this.drawCircles();
+                }
+                
+                this.ctx.restore();
+                
+                // Draw player (always centered on screen)
+                this.drawPlayer();
+                
+                // Draw weapon on top of player
+                this.drawWeapon();
+                
+                // Draw UI elements
+                this.drawUI();
+            }
+
+            drawEnvironment(cameraX, cameraY) {
+                if (this.isInsideBuilding) return; // No flowers inside
+                
+                // Only draw flowers that are visible on screen (using the static flower array)
+                // Account for zoom level in visibility calculations
+                const visibleWidth = window.innerWidth / this.zoomLevel;
+                const visibleHeight = window.innerHeight / this.zoomLevel;
+                
+                this.flowers.forEach(flower => {
+                    // Check if flower is within visible area (with some margin)
+                    if (flower.x > cameraX - 100 && flower.x < cameraX + visibleWidth + 100 &&
+                        flower.y > cameraY - 100 && flower.y < cameraY + visibleHeight + 100) {
+                        
+                        this.ctx.fillStyle = flower.color;
+                        for (let i = 0; i < 5; i++) {
+                            this.ctx.beginPath();
+                            this.ctx.arc(
+                                flower.x + Math.cos(i * Math.PI * 2 / 5) * 8,
+                                flower.y + Math.sin(i * Math.PI * 2 / 5) * 8,
+                                6, 0, Math.PI * 2
+                            );
+                            this.ctx.fill();
+                        }
+                        
+                        // Flower center
+                        this.ctx.fillStyle = '#FFD700';
+                        this.ctx.beginPath();
+                        this.ctx.arc(flower.x, flower.y, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                });
+            }
+
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Start the game when page loads
+        window.addEventListener('load', () => {
+            new Game();
+        });
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
